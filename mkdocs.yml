@@ -1,0 +1,59 @@
+site_name: Veil Engine Documentation
+site_description: Developer documentation for Veil Engine
+repo_url: https://github.com/davidsendecki/VeilEngine
+repo_name: davidsendecki/VeilEngine
+
+theme:
+  name: material
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - navigation.top
+    - navigation.indexes
+    - content.code.copy
+    - search.suggest
+    - search.highlight
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - md_in_html
+  - pymdownx.details
+  - pymdownx.superfences
+  - pymdownx.tabbed:
+      alternate_style: true
+  - toc:
+      permalink: true
+
+nav:
+  - Home: index.md
+  - Getting Started: getting-started.md
+  - Architecture:
+      - Overview: architecture/index.md
+      - Project Structure: architecture/project-structure.md
+  - Engine:
+      - Overview: engine/index.md
+      - Asset System: engine/asset-system.md
+      - Rendering: engine/rendering.md
+  - Assets & Formats:
+      - Overview: assets/index.md
+      - Materials & Shaders: assets/materials-shaders.md
+      - VMDL: assets/vmdl.md
+  - Tools:
+      - Overview: tools/index.md
+      - ToolCore2: tools/toolcore2.md
+      - FrameGUI: tools/framegui.md
+      - Material Editor: tools/material-editor.md
+      - Model Studio: tools/model-studio.md
+  - Development Status: development-status.md
