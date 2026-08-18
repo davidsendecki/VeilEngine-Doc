@@ -64,6 +64,8 @@ nav:
       - Input & Player Movement: engine/input-movement.md
   - Assets & Formats:
       - Overview: assets/index.md
+      - Asset Handles & Lifetime: assets/asset-handles.md
       - Materials & Shaders: assets/materials-shaders.md
       - VMDL: assets/vmdl.md
+      - VMAP: assets/vmap.md
   - Development Status: development-status.md
