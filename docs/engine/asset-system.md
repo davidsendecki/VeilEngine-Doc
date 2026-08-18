@@ -1,50 +1,69 @@
 # Asset System
 
-The runtime **AssetSystem** owns loaded asset records and coordinates dependency batches used during world and resource loading.
+The runtime **AssetSystem** owns CPU-side asset records and the dependency batches used to group asset requests for larger loading operations.
 
-## Core responsibilities
+## Public boundary
 
-`CAssetSystem` currently provides model requests, dependency-batch management, synchronous batch loading, progress queries, model state queries, and read-only access to ready model data.
+The Engine accesses the module through `SAssetSysAPI`. The current public surface covers lifecycle, dependency batches, model requests, model state, and borrowed model views.
 
-Asset requests are deduplicated by path. Requesting an already-known model therefore resolves to the existing asset handle rather than creating another independent record.
+The AssetSystem imports only shared paths and logging; it does not own or depend on RenderSystemVK.
 
-## Asset handles
+## Model requests
 
-Runtime assets are addressed through typed `AssetHandle<T>` values. This keeps references lightweight and avoids exposing subsystem-owned storage directly to callers.
+A model request is identified by an `AssetHandle<SModelAsset>`. Requests are deduplicated by asset path, so requesting an already-known model resolves to the existing record/handle instead of creating duplicate CPU asset state.
 
-The AssetSystem retains ownership of the actual asset memory. Views returned to callers are therefore non-owning and remain valid only while the corresponding data remains loaded and the AssetSystem remains alive.
+```text
+asset path
+    │
+    ▼
+RequestModel(path, batch)
+    │
+    ▼
+AssetHandle<SModelAsset>
+    │
+    ├─ GetModelState
+    └─ GetModel -> borrowed SModelAssetView
+```
+
+The AssetSystem retains ownership of resolved model memory. A returned model view is read-only borrowed data, not a transfer of ownership.
 
 ## Dependency batches
 
-A dependency batch groups assets required by a larger loading operation. The current model workflow is:
+A dependency batch groups handles needed by a larger loading operation such as a map transition. `LoadDependencyBatch()` currently performs the batch's CPU loading synchronously.
+
+Batch progress reports aggregate total/completed/failed dependency counts. The batch can also expose its unique model handles so the Engine can pass the CPU-ready set to RenderSystemVK for GPU preparation.
+
+Destroying a dependency batch destroys **batch bookkeeping**, not the asset records referenced by that batch.
+
+## CPU/GPU separation
+
+AssetSystem ends at CPU-ready content:
 
 ```text
-CreateDependencyBatch
-        │
-        ├─ RequestModel(..., Batch)
-        ├─ RequestModel(..., Batch)
-        │
-        ▼
-LoadDependencyBatch
-        │
-        ▼
-GetDependencyBatchProgress
-        │
-        ▼
-DestroyDependencyBatch
+VMDL file
+   │
+   ▼
+AssetSystem / CVMDLReader
+   │
+   ▼
+SModelAsset (CPU)
+   │ AssetHandle
+   ▼
+RenderSystemVK::PrepareModelResources
+   │
+   ▼
+backend-specific GPU state
 ```
 
-Destroying a batch removes its dependency bookkeeping; it does **not** unload the assets referenced by that batch.
+This prevents Vulkan allocation/lifetime concerns from becoming part of the runtime asset loader.
 
-## Loading and fallback behavior
+## Fallback behavior
 
-Models begin as requests and are loaded when their dependency batch is processed. Assets that are already ready are skipped.
-
-The AssetSystem also owns a required fallback/error model. If an ordinary model fails to load but the fallback is available, the failed request can resolve through that fallback and report a ready state to consumers. Failure of the fallback asset itself is treated differently because no valid substitute then exists.
+The AssetSystem owns a required fallback/error model. An ordinary failed model request can resolve through that fallback when it is available. Failure of the fallback itself cannot be handled in the same way because there is no valid substitute beneath it.
 
 ## Current scope
 
-The implementation is currently strongly model-oriented. The architecture leaves room for additional asset classes to adopt the same handle/storage/loading model as the asset pipeline grows.
+The implementation is currently strongly model-oriented. Additional asset classes can adopt the same typed-handle/record ownership model as their runtime pipelines become concrete.
 
 !!! warning "Lifetime rule"
-    Do not retain raw pointers into AssetSystem-owned model data beyond the lifetime guaranteed by the AssetSystem. Handles are the durable reference mechanism; resolved views are borrowed data.
+    Handles are references to AssetSystem records. Resolved views borrow record-owned memory and must not be retained beyond the lifetime guaranteed by the AssetSystem.
