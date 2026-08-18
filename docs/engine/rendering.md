@@ -1,41 +1,64 @@
 # Rendering
 
-Veil's runtime rendering backend is implemented in `src/rendersystemvk` and targets Vulkan.
+Veil's runtime rendering backend is implemented by **RenderSystemVK** and targets Vulkan. The public renderer boundary consumes engine-defined asset handles and extracted render snapshots; Vulkan details remain private to the renderer module.
 
 !!! warning "Active development"
-    The rendering architecture is undergoing active development. Treat the current class and folder boundaries as implementation state rather than a frozen public API.
+    The rendering architecture is undergoing active development. Treat current internal class/folder boundaries as implementation state rather than a frozen graphics API.
 
-## Layering
+## External boundary
 
-The renderer source is currently divided into several concerns:
+The Engine interacts with the renderer through `SRenderSysAPI`. At the current level, the important operations are resource preparation/cleanup, rendering a frame, reacting to physical window-size changes, and selecting VSync policy.
 
 ```text
-rendersystemvk/src/
-├─ backend/
-├─ commands/
-├─ core/
-├─ presentation/
-├─ render/
-├─ shared/
-└─ vulkan/
+Client / gameplay
+      │ extracts
+      ▼
+SRenderView + SRenderWorld
+      │
+      ▼
+Engine
+      │ SRenderSysAPI
+      ▼
+RenderSystemVK
+      │
+      ▼
+Vulkan / VMA
 ```
 
-The separation reflects an important design goal: Vulkan mechanics should remain below higher-level rendering concepts. Game and feature code should not need to manually reproduce Vulkan resource creation, synchronization, presentation, or pipeline setup.
+The renderer does not traverse `CWorld`, entity objects, or component storage directly.
 
-## Vulkan layer
+## CPU/GPU asset boundary
 
-The low-level Vulkan side owns the API-facing objects and helpers required to operate the device. Higher layers can then build rendering behavior using those primitives without scattering raw setup code throughout the renderer.
+AssetSystem owns CPU model data. RenderSystemVK borrows the AssetSystem API during initialization and prepares backend-specific GPU resources from CPU-ready model handles before the owning map is activated.
 
-## Rendering layer
+An `AssetHandle<SModelAsset>` is therefore an engine asset identity, not a Vulkan resource handle.
 
-The `render` area is intended for higher-level rendering concepts such as render queues, passes, shader management, and graphics pipelines. A render pass should own the work associated with a particular stage of rendering rather than becoming a second renderer by itself.
+## Internal layering
 
-For example, a forward pass can consume prepared render work and issue the commands necessary for the forward scene stage. Future passes such as shadows can be implemented as separate stages while sharing the same lower-level Vulkan infrastructure.
+The renderer separates higher-level rendering behavior from Vulkan mechanics. The current implementation includes backend context/allocation, command/transfer helpers, presentation, renderer/resource management, and Vulkan object wrappers.
+
+A useful conceptual stack is:
+
+```text
+Render snapshots / asset handles
+          │
+          ▼
+High-level renderer and GPU resources
+          │
+          ▼
+Rendering/presentation operations
+          │
+          ▼
+Vulkan wrappers + synchronization helpers
+          │
+          ▼
+Vulkan + VMA
+```
 
 ## Presentation
 
-Presentation-specific code is separated from general rendering work. Swapchain and frame-presentation concerns belong here rather than in gameplay-facing code.
+Swapchain and presentation behavior are renderer-owned. Window changes are reported to the renderer, which defers swapchain recreation to a safe rendering boundary rather than rebuilding presentation state inside the platform callback.
 
 ## Direction
 
-The renderer should expose progressively higher-level operations as it matures. Features such as materials, models, shadows, decals, and particles should normally be implemented against those abstractions rather than directly manipulating raw Vulkan objects from unrelated engine modules.
+New graphics features should normally enter through renderer-owned abstractions. Gameplay and unrelated runtime modules should not manipulate descriptor pools, command pools, fences, image layouts, or raw Vulkan pipelines directly.
