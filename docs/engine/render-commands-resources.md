@@ -12,17 +12,15 @@ The `commands` layer also contains Vulkan barrier helpers. Synchronization and l
 
 ## CPU assets vs GPU resources
 
-A loaded `SModelAsset` is CPU-side asset data. It is not automatically a renderable Vulkan resource.
-
-The map-loading pipeline makes this distinction explicit:
+Loaded model data is CPU-side AssetSystem state. It is not automatically a renderable Vulkan resource.
 
 ```text
 AssetSystem
    │
-   ├─ load VMDL / CPU model data
+   ├─ load VMDL through CVeilModelLoader
    ▼
-SModelAsset
-   │
+CPU model record / SModelAssetView
+   │ AssetHandle<EAssetType::Model>
    ▼
 RenderSystemVK::PrepareModelResources
    │
@@ -33,16 +31,31 @@ GPU model resources
 RenderFrame
 ```
 
-`CRenderSystemVK` owns a `CVulkanResourceManager` for this GPU-facing stage and exposes `PrepareModelResources` and `ClearModelResources` through the renderer boundary.
+The renderer owns its GPU-facing resource manager and exposes preparation/cleanup through the renderer boundary.
 
 ## Why the split matters
 
-AssetSystem should not need to know how Vulkan buffers are allocated, staged, synchronized, or destroyed. Likewise, the renderer should not become the owner of source/compiled asset loading.
+AssetSystem should not need to know how Vulkan buffers are allocated, staged, synchronized, or destroyed. Likewise, the renderer should not become the owner of compiled asset loading.
 
-The CPU asset is the portable content representation; the GPU resource is backend-specific prepared state.
+The CPU asset is the portable runtime content representation; the GPU resource is backend-specific prepared state. `AssetHandle<EAssetType::Model>` remains the engine-side identity used to associate those layers.
 
-## Model renderer
+## Render extraction
 
-`CVulkanModelRenderer` is the renderer-side consumer responsible for drawing prepared model resources from the extracted `SRenderWorld` using the current `SRenderView`.
+The Client's renderable components and extracted `SRenderWorld` carry model handles rather than Vulkan objects. RenderSystemVK resolves those identities against its prepared GPU resources when drawing the frame.
 
-As additional graphics features appear, the same separation should be preserved: resource managers own prepared GPU state, passes/renderers consume that state, and low-level Vulkan helpers implement API mechanics.
+This preserves the boundary:
+
+```text
+Gameplay/ECS
+    │ model handle
+    ▼
+SRenderWorld
+    │
+    ▼
+RenderSystemVK
+    │
+    ▼
+GPU resources
+```
+
+As additional graphics features appear, the same separation should be preserved: resource managers own prepared GPU state, rendering code consumes that state, and low-level Vulkan helpers implement API mechanics.
