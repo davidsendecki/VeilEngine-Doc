@@ -44,6 +44,9 @@ nav:
       - Project Structure: architecture/project-structure.md
   - Engine:
       - Overview: engine/index.md
+      - Engine Lifecycle: engine/lifecycle.md
+      - World & Entities: engine/world-entities.md
+      - Map Loading: engine/map-loading.md
       - Asset System: engine/asset-system.md
       - Rendering: engine/rendering.md
   - Assets & Formats:
