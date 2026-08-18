@@ -53,6 +53,8 @@ nav:
       - Rendering:
           - Overview: engine/rendering.md
           - RenderSystemVK Layers: engine/rendering-layers.md
+          - Render Frame & Presentation: engine/render-frame.md
+          - Commands & GPU Resources: engine/render-commands-resources.md
   - Assets & Formats:
       - Overview: assets/index.md
       - Materials & Shaders: assets/materials-shaders.md
@@ -60,6 +62,7 @@ nav:
   - Tools:
       - Overview: tools/index.md
       - ToolCore2: tools/toolcore2.md
+      - AssetServices: tools/asset-services.md
       - FrameGUI: tools/framegui.md
       - Material Editor: tools/material-editor.md
       - Model Studio: tools/model-studio.md
