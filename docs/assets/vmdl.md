@@ -63,25 +63,29 @@ Tangent  : float4
 
 Meshes reference names/materials through indices rather than embedding repeated full strings in every mesh record. This keeps binary references compact and separates mesh geometry from string/material data.
 
-## Runtime path
+## Runtime loading
+
+The AssetSystem model loader is implemented by `CVeilModelLoader`. It replaced the earlier `CVMDLReader` implementation and is responsible for validating and decoding compiled VMDL data into the runtime model representation.
+
+The loader uses the shared `CBinaryReader` for bounds-checked binary access. Binary-range validation remains part of the loading boundary before data is exposed to the AssetSystem.
 
 ```text
 .vmdl
   │
   ▼
-CVMDLReader
+CVeilModelLoader
   │
   ▼
-AssetSystem-owned SModelAsset
+AssetSystem-owned model record / CPU model data
   │
-  ├─ AssetHandle<SModelAsset>
+  ├─ AssetHandle<EAssetType::Model>
   └─ borrowed SModelAssetView
   │
   ▼
 RenderSystemVK GPU preparation
 ```
 
-The binary reader and AssetSystem produce CPU-side runtime content. Vulkan buffers and other backend resources are not part of the VMDL ownership model.
+The loader and AssetSystem produce CPU-side runtime content. Vulkan buffers and other backend resources are not part of the VMDL ownership model.
 
 ## Evolution rule
 
