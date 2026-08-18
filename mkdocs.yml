@@ -44,6 +44,7 @@ nav:
       - Project Structure: architecture/project-structure.md
       - Launcher & Platform Boundary: architecture/launcher-platform.md
       - Subsystems & API Tables: architecture/subsystem-apis.md
+      - Runtime API Reference: architecture/runtime-apis.md
       - SubsystemLoader: architecture/subsystem-loader.md
   - Engine:
       - Overview: engine/index.md
