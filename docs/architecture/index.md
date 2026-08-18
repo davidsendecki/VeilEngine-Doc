@@ -1,28 +1,30 @@
 # Architecture Overview
 
-Veil Engine is split into relatively independent runtime subsystems and a separate tool ecosystem. Shared public contracts live in the `shared` project so modules can communicate without exposing their internal implementation.
+Veil Engine is split into relatively independent runtime subsystems. Shared public contracts live in the `shared` project so modules can communicate without exposing their internal implementation.
 
-## Runtime modules
+## Documented runtime modules
 
-The current source tree contains dedicated modules for:
+The current documentation focuses on:
 
+- `launcher` — executable startup and platform boundary.
 - `engine` — runtime orchestration and engine-level services.
 - `client` — game/client-side world and gameplay integration.
 - `assetsystem` — runtime asset ownership, loading, handles, and dependency batches.
 - `rendersystemvk` — Vulkan rendering backend.
 - `physicsystem` — physics integration.
-- `audiosystem` — audio subsystem.
-- `scriptsystem` — scripting subsystem.
-- `launcher` — executable startup layer.
 - `shared` — public APIs, interfaces, asset structures, math, map structures, and common contracts.
 
-## Tool ecosystem
+Other experimental or not-yet-priority runtime modules may exist in the repository but are intentionally omitted from this documentation until their architecture is ready to be treated as useful reference material.
 
-Editor applications are kept below `src/tools`. Shared editor infrastructure is provided by **ToolCore2**, while asset processing is separated into **AssetServices**. Current applications include the **Material Editor**, **Model Studio**, and **Map Compiler**.
+## Tools
+
+The repository also contains a substantial editor/tool ecosystem. Tool documentation is intentionally deferred while that architecture is being reworked. The runtime documentation should therefore not be read as an inventory of every project present in the repository.
 
 ## Architectural direction
 
-The intended boundary is that high-level engine and tool code should depend on subsystem APIs and stable data contracts rather than directly reaching into backend implementation details. This is especially important for rendering: Vulkan-specific resource and synchronization details belong below the renderer's higher-level interfaces.
+High-level engine and gameplay code should depend on subsystem APIs and stable data contracts rather than directly reaching into backend implementation details. This is especially important for rendering and physics: Vulkan and Box3D-specific resource/lifetime details belong behind their subsystem boundaries.
+
+Cross-subsystem workflows are coordinated by an owner at the appropriate level. Map loading is a representative example: the Engine coordinates parsing, client world creation, AssetSystem CPU loading, RenderSystemVK GPU preparation, and final world activation rather than allowing those modules to take ownership of one another.
 
 !!! note "Living architecture"
     This documentation describes the implementation as it exists now and the direction visible in the codebase. Components marked as work in progress should not yet be treated as permanent API contracts.
