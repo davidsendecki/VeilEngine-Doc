@@ -48,7 +48,11 @@ nav:
       - World & Entities: engine/world-entities.md
       - Map Loading: engine/map-loading.md
       - Asset System: engine/asset-system.md
-      - Rendering: engine/rendering.md
+      - Physics: engine/physics.md
+      - Input & Player Movement: engine/input-movement.md
+      - Rendering:
+          - Overview: engine/rendering.md
+          - RenderSystemVK Layers: engine/rendering-layers.md
   - Assets & Formats:
       - Overview: assets/index.md
       - Materials & Shaders: assets/materials-shaders.md
