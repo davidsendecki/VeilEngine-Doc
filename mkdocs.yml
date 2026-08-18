@@ -45,16 +45,20 @@ nav:
   - Engine:
       - Overview: engine/index.md
       - Engine Lifecycle: engine/lifecycle.md
-      - World & Entities: engine/world-entities.md
       - Map Loading: engine/map-loading.md
       - Asset System: engine/asset-system.md
       - Physics: engine/physics.md
-      - Input & Player Movement: engine/input-movement.md
       - Rendering:
           - Overview: engine/rendering.md
           - RenderSystemVK Layers: engine/rendering-layers.md
           - Render Frame & Presentation: engine/render-frame.md
           - Commands & GPU Resources: engine/render-commands-resources.md
+  - Client & Gameplay:
+      - Overview: client/index.md
+      - Game Session & Rules: client/game-session.md
+      - World & Entities: engine/world-entities.md
+      - Entities, Components & Systems: client/entities-components.md
+      - Input & Player Movement: engine/input-movement.md
   - Assets & Formats:
       - Overview: assets/index.md
       - Materials & Shaders: assets/materials-shaders.md
