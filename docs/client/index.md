@@ -1,52 +1,61 @@
-# Client / Game Architecture
+# Client & Gameplay Architecture
 
-The `client` module is Veil's engine-facing gameplay module. `CClient` owns the active `CGameSession` and translates the pointer-based exported `SGameAPI` boundary into the session's gameplay-facing interface.
+The `client` module is Veil's Engine-facing gameplay module. It owns gameplay/session state and exposes that state to the Engine through `SGameAPI` rather than exposing `CWorld` or entity implementation classes across the DLL boundary.
 
-## Ownership
-
-The engine owns the client module itself, while `CClient` owns all gameplay state beneath the active session. Engine services such as logging, timing, assets, and physics are borrowed through the game import API and must outlive the client.
+## Ownership hierarchy
 
 ```text
 Engine
-  │
+  │ owns module loader / borrows SGameAPI
   ▼
-SGameAPI / CClient
-  │
+CClient
+  │ owns
   ▼
 CGameSession
   │
   ├─ CWorld
   ├─ CGameRules
-  ├─ local player
-  └─ active camera
+  ├─ local player handle
+  └─ active camera handle
 ```
+
+Engine services supplied through the game import table are borrowed for the client/session lifetime. Gameplay does not take ownership of AssetSystem, PhysicsSystem, the Engine clock, or platform state.
+
+## CClient boundary
+
+`CClient` translates the exported pointer-based module API into the reference/object-oriented session interface. Its main responsibilities are staged map-world operations, input resolution, fixed/frame update dispatch, and renderer-facing snapshot extraction.
 
 ## Map lifecycle
 
-The client participates in the staged map-loading pipeline through four operations:
+The client participates in map loading without owning the complete loading pipeline:
 
 ```text
 CreateMapWorld
-     │
-     ▼
+      │
+      ▼
 PrecacheMapWorld
-     │
-     ▼
+      │
+      │ Engine loads CPU/GPU dependencies
+      ▼
 ActivateMapWorld
-
-AbortMapWorld ── used for failure/replacement
 ```
 
-This keeps the engine's cross-subsystem map loader in control while the client owns creation and activation of gameplay state.
+`AbortMapWorld` clears pending/active map-specific state during replacement or failure.
 
-## Runtime updates
+The Engine remains the coordinator because the complete operation crosses VMAP parsing, gameplay, AssetSystem, and RenderSystemVK.
 
-`ProcessInput()` resolves raw engine input once per rendered frame. `FixedUpdate()` advances gameplay using a command associated with a fixed simulation tick. `FrameUpdate()` is reserved for frame-rate-dependent client work.
+## Simulation and input
 
-## Rendering boundary
+Raw platform input is translated before it reaches gameplay. Client input bindings resolve semantic actions once per rendered frame, while `CUserCmdBuilder` produces an `SUserCommand` for each fixed simulation tick.
 
-`BuildRenderFrame()` extracts `SRenderView` and `SRenderWorld` snapshots from the active session. The renderer receives those snapshots; it does not traverse client entities or components directly.
+The active session consumes that command during `FixedUpdate`. This keeps variable-rate event collection separate from fixed-rate gameplay simulation.
 
-## Platform boundary
+## Render extraction
 
-The client can request map loading and mouse capture through callbacks supplied by the engine. It does not directly depend on SDL or other launcher/platform APIs.
+Gameplay owns the ECS; the renderer does not. `BuildRenderFrame()` produces self-contained `SRenderView` and `SRenderWorld` snapshots for the current frame.
+
+This boundary allows rendering architecture to evolve without making Vulkan code depend on client entity/component storage.
+
+## Platform independence
+
+Client code requests operations such as map loading or mouse capture through Engine-provided callbacks. SDL and launcher-specific implementation remains outside the gameplay module.
