@@ -12,8 +12,6 @@ This page summarizes the public dynamic-module boundaries used by the currently 
 
 ### Exports
 
-The API exposes:
-
 ```text
 Initialize / Shutdown
 BeginInputFrame
@@ -28,13 +26,11 @@ SubmitTextInput
 SetInputFocus
 ```
 
-The launcher therefore owns event polling while the Engine owns the canonical platform-independent input state.
+The launcher owns event polling while the Engine owns the canonical platform-independent input state.
 
 ## AssetSystem API
 
-`SAssetSysAPI` version 1 exposes runtime CPU-asset ownership and dependency batches.
-
-Its main groups are:
+`SAssetSysAPI` version 1 exposes runtime CPU-asset ownership and dependency batches. Model operations use the category-typed `AssetHandle<EAssetType::Model>` handle.
 
 ```text
 Lifecycle
@@ -54,13 +50,11 @@ Models
   GetModel
 ```
 
-The AssetSystem import is deliberately small: shared paths and logging.
+The AssetSystem import remains deliberately small: shared paths and logging.
 
 ## RenderSystem API
 
-`SRenderSysAPI` version 1 is the Engine-facing rendering boundary. Its import structure receives the window, paths/logger, and a borrowed AssetSystem API used as the CPU model source during initial GPU upload.
-
-The exported operations are:
+`SRenderSysAPI` version 1 is the Engine-facing rendering boundary. Its import structure receives the window, paths/logger, and a borrowed AssetSystem API used as the CPU model source during GPU preparation.
 
 ```text
 Initialize / Shutdown
@@ -71,13 +65,11 @@ OnWindowPixelSizeChanged
 SetVSync
 ```
 
-The API reflects the current map-level resource policy: model resources are prepared before activation, and the first implementation can clear the complete model-resource cache during replacement/failure cleanup.
+The current resource policy prepares model GPU state before map activation and can clear the model-resource cache during replacement/failure cleanup.
 
 ## PhysicsSystem API
 
 `SPhysicSysAPI` is currently version 3. It exposes engine-defined physics handles and descriptors rather than Box3D types.
-
-The API contains scene management, rigid-body operations, velocity/impulse operations, and the stateless `MoveCharacter` query used by player movement.
 
 ```text
 Scenes
@@ -97,10 +89,34 @@ Diagnostic active-scene/body counters are also currently exported.
 
 ## Game API
 
-The Game API forms the Engine-to-client boundary. Its implementation is `CClient`, which owns `CGameSession` and the gameplay world beneath it.
+The Game API forms the Engine-to-client DLL boundary. Its implementation is `CClient`, which owns `CGameSession` and the gameplay world beneath it.
 
-The Engine uses this boundary for staged map-world creation/activation, input processing, fixed/frame updates, and render-frame extraction.
+### Game imports
+
+`SGameImport` now acts as the capability boundary from the game module back into Engine-owned functionality. It currently contains shared logging/timing, model asset callbacks, PhysicsSystem access, map-load requests, canonical input state, and mouse-capture requests.
+
+Model requests are exposed as Engine capabilities:
+
+```text
+Client
+  │
+  │ RequestModel / GetModel
+  ▼
+SGameImport
+  │
+  ▼
+Engine
+  │
+  ▼
+AssetSystem
+```
+
+The Client therefore does not require a direct `SAssetSysAPI` pointer merely to request or resolve models.
+
+### Game exports
+
+The Engine uses `SGameAPI` for initialization/shutdown, staged map-world creation and activation, input processing, fixed/frame updates, and render-frame extraction.
 
 ## Boundary guideline
 
-These tables should remain relatively narrow. If an implementation class grows a helper method, that does not automatically mean the function belongs in the exported API. Cross-DLL callbacks should represent capabilities genuinely required by the host and preserve subsystem ownership.
+These tables should remain relatively narrow. If an implementation class grows a helper method, that does not automatically mean the function belongs in an exported API. Cross-DLL callbacks should represent capabilities genuinely required by the host or guest module and preserve subsystem ownership.
