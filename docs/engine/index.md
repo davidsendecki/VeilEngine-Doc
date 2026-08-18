@@ -1,13 +1,36 @@
 # Engine
 
-The runtime is composed from multiple subsystem modules rather than one monolithic executable implementation. Public contracts are shared through the common include layer, while each subsystem owns its implementation and lifetime-sensitive state.
+The runtime is composed from multiple subsystem modules rather than one monolithic executable implementation. Public contracts are shared through the common include layer, while each subsystem retains ownership of its implementation and lifetime-sensitive state.
 
-## Major runtime areas
+## Engine role
 
-**Engine** coordinates application-level runtime behavior and subsystem integration. **Client** contains game-facing world behavior. **AssetSystem** owns runtime asset records and loading state. **RenderSystemVK** owns Vulkan rendering. Dedicated modules exist for physics, audio, and scripting.
+The **Engine** is primarily an orchestrator. It owns the runtime subsystem loaders/API references, timing and fixed-step scheduling, platform-independent input state, map-load coordination, and the order in which client simulation and rendering are invoked.
 
-This modular structure allows systems such as asset loading and rendering to expose narrow APIs while retaining ownership of their internal resources.
+It should not absorb responsibilities already owned by another subsystem merely because it coordinates them.
 
-## Documentation scope
+## Documented runtime systems
 
-The initial documentation focuses on the systems that are currently most developed and most relevant to the asset/render pipeline. Other runtime modules will be expanded as their implementations stabilize.
+- **AssetSystem** — CPU-side asset records, typed handles, dependency batches, and model loading.
+- **PhysicsSystem** — physics scenes/bodies and character collision queries behind engine-defined handles/descriptors.
+- **RenderSystemVK** — Vulkan GPU resources, presentation, and rendering of extracted world snapshots.
+- **Client/Game** — gameplay session, world/entities/components, input interpretation, movement, and render extraction.
+
+## Cross-system coordination
+
+Map loading demonstrates the intended architecture well:
+
+```text
+Engine / CVMapLoader
+      │
+      ├─ parse VMAP
+      ├─ ask Client to create/precache world
+      ├─ ask AssetSystem to load CPU dependencies
+      ├─ ask RenderSystemVK to prepare GPU resources
+      └─ ask Client to activate gameplay
+```
+
+The Engine coordinates the sequence without taking ownership of the internal asset records, Vulkan resources, physics objects, or gameplay ECS.
+
+## Scope
+
+This documentation currently concentrates on the runtime systems above. Other modules can be documented later when their architecture is sufficiently mature and relevant to the runtime reference.
