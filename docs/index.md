@@ -1,24 +1,27 @@
 # Veil Engine
 
-Veil Engine is a C++ game-engine project with a modular runtime, a Vulkan rendering backend, an asset pipeline, and a dedicated suite of development tools.
+Veil Engine is a C++ game-engine project built around a modular runtime, Vulkan rendering, explicit subsystem boundaries, a gameplay/client framework, and compiled asset formats.
 
 !!! warning "Work in progress"
-    Veil Engine is under active development. Interfaces, file formats, tools, and subsystem boundaries documented here may change as the engine evolves.
+    Veil Engine is under active development. Interfaces, file formats, and subsystem boundaries documented here may change as the engine evolves.
 
 ## Purpose of this documentation
 
-This site documents the architecture and intended usage of the engine and its tools. It focuses on subsystem responsibilities, data flow, high-level APIs, asset formats, and development workflows rather than attempting to provide an exhaustive reference for every C++ symbol.
+This site documents the current runtime architecture and intended usage of Veil Engine. It focuses on subsystem responsibilities, ownership and lifetime rules, data flow, public module APIs, gameplay architecture, rendering, and compiled asset formats rather than attempting to mirror every C++ symbol.
 
 The **VeilEngine repository is the source of truth**. When implementation and documentation disagree, the implementation should be reviewed and the documentation updated accordingly.
 
 ## Main areas
 
-- **Engine** — runtime systems and services.
-- **Rendering** — Vulkan renderer and graphics architecture.
-- **Assets & Formats** — runtime assets, shaders, materials, and compiled formats.
-- **Tools** — ToolCore2, FrameGUI, Material Editor, Model Studio, and related editor infrastructure.
-- **Architecture** — module boundaries and project organization.
+- **Architecture** — launcher/platform boundary, dynamic subsystems, API tables, and project organization.
+- **Engine** — runtime orchestration, map loading, AssetSystem, PhysicsSystem, and RenderSystemVK.
+- **Client & Gameplay** — GameSession, World, entities/components/systems, input, and player movement.
+- **Assets & Formats** — asset handles/lifetimes, shaders/materials, VMDL, and VMAP.
+
+## Documentation scope
+
+Tool/editor documentation is intentionally deferred while that architecture is being reworked. Audio and scripting are also outside the current documentation scope. Their presence in the source tree should not be interpreted as missing pages from this runtime-focused documentation pass.
 
 ## Documentation maturity
 
-This is the first documentation pass. Stable concepts are documented normally; systems undergoing active redesign are explicitly marked as work in progress. This makes the documentation useful as both a reference and an architecture-review surface while Veil continues to develop.
+Stable concepts are documented normally; systems undergoing active redesign are explicitly marked as work in progress. The documentation is intended to serve both as a practical reference and as an architecture-review surface while Veil continues to develop.
