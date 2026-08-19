@@ -30,7 +30,7 @@ The launcher owns event polling while the Engine owns the canonical platform-ind
 
 ## AssetSystem API
 
-`SAssetSysAPI` version 1 exposes runtime CPU-asset ownership and dependency batches. Model operations use the category-typed `AssetHandle<EAssetType::Model>` handle.
+`SAssetSysAPI` version 2 exposes runtime CPU-asset ownership and dependency batches. Operations use category-typed model, material and texture handles.
 
 ```text
 Lifecycle
@@ -48,13 +48,21 @@ Models
   CopyDependencyBatchModels
   GetModelState
   GetModel
+
+Materials
+  GetMaterialState
+  GetMaterial
+
+Textures
+  GetTextureState
+  GetTexture
 ```
 
-The AssetSystem import remains deliberately small: shared paths and logging.
+The AssetSystem import remains deliberately small: shared paths and logging. Model requests are public roots; material and texture requests remain internal dependency-resolution operations. See [Asset System](../engine/asset-system.md) for the complete loading and ownership model.
 
 ## RenderSystem API
 
-`SRenderSysAPI` version 1 is the Engine-facing rendering boundary. Its import structure receives the window, paths/logger, and a borrowed AssetSystem API used as the CPU model source during GPU preparation.
+`SRenderSysAPI` version 1 is the Engine-facing rendering boundary. Its import structure receives the window, paths/logger, and a borrowed AssetSystem API used as the CPU source during GPU preparation.
 
 ```text
 Initialize / Shutdown
@@ -65,7 +73,7 @@ OnWindowPixelSizeChanged
 SetVSync
 ```
 
-The current resource policy prepares model GPU state before map activation and can clear the model-resource cache during replacement/failure cleanup.
+The current resource policy prepares model GPU state before map activation and can clear the model-resource cache during replacement/failure cleanup. Materials and textures are resolved transitively by the renderer through AssetSystem's material and texture view operations.
 
 ## PhysicsSystem API
 
@@ -93,7 +101,7 @@ The Game API forms the Engine-to-client DLL boundary. Its implementation is `CCl
 
 ### Game imports
 
-`SGameImport` now acts as the capability boundary from the game module back into Engine-owned functionality. It currently contains shared logging/timing, model asset callbacks, PhysicsSystem access, map-load requests, canonical input state, and mouse-capture requests.
+`SGameImport` acts as the capability boundary from the game module back into Engine-owned functionality. It currently contains shared logging/timing, model asset callbacks, PhysicsSystem access, map-load requests, canonical input state, and mouse-capture requests.
 
 Model requests are exposed as Engine capabilities:
 

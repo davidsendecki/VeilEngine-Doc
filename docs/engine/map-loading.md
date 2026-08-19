@@ -39,15 +39,23 @@ Any unrecoverable stage can transition to `Failed`.
 
 ## Sequence
 
-The loader first reads and validates the compiled VMAP beneath the configured map directory. The client creates the new world and map entities, then entity `Precache` calls populate an AssetSystem dependency batch.
+The loader first reads and validates the compiled VMAP beneath the configured map directory. It then creates an AssetSystem dependency batch and passes that batch into client-world creation.
 
-The AssetSystem loads the CPU-side asset data. The renderer is then given the opportunity to prepare the GPU resources required by those assets. Only after both preparation phases succeed does the client spawn and activate the world.
+The client creates the world and deserializes map entities. During `PrecacheMapWorld()`, entity `Precache()` implementations request their root models into the active dependency batch.
+
+`LoadDependencyBatch()` loads those CPU models synchronously. Model loading discovers material paths, and material loading discovers texture paths, so the batch's root model set leads to the complete transitive CPU dependency chain.
+
+After successful CPU loading, the Engine copies the unique root model handles from the batch and passes them to `RenderSystemVK::PrepareModelResources()`. GPU model preparation recursively resolves the corresponding GPU materials and textures. Only after both CPU and GPU preparation succeed does the client spawn and activate the world.
 
 This staged design prevents gameplay from entering an active world whose required render or asset data is still missing.
 
-## Dependency batch
+## Dependency-batch semantics
 
-A map load owns an `AssetDependencyBatchHandle`. Entity precache requests attach required assets to this batch, allowing the engine to treat the map's resource requirements as one loading operation.
+A map load owns one `AssetDependencyBatchHandle`. The batch groups root model requests for that loading operation; it is not an ownership container and does not need to list every transitive material or texture explicitly.
+
+Destroying the batch removes its bookkeeping without destroying the AssetSystem records it referenced.
+
+The complete batch behavior, loading states and fallback rules are documented in [Asset System](asset-system.md#dependency-batches).
 
 ## Replacement boundary
 

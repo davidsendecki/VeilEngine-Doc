@@ -29,9 +29,9 @@ The renderer does not traverse `CWorld`, entity objects, or component storage di
 
 ## CPU/GPU asset boundary
 
-AssetSystem owns CPU model data. RenderSystemVK borrows the AssetSystem API during initialization and prepares backend-specific GPU resources from CPU-ready model handles before the owning map is activated.
+AssetSystem owns CPU model, material and texture data. RenderSystemVK borrows the AssetSystem API during initialization and prepares backend-specific GPU resources from CPU-ready model handles before the owning map is activated.
 
-An `AssetHandle<SModelAsset>` is therefore an engine asset identity, not a Vulkan resource handle.
+An `AssetHandle<EAssetType::Model>` is therefore an engine asset identity, not a Vulkan resource handle. Preparing a model also resolves its material handles and those materials' texture handles through borrowed AssetSystem views.
 
 ## Internal layering
 
@@ -62,3 +62,5 @@ Swapchain and presentation behavior are renderer-owned. Window changes are repor
 ## Direction
 
 New graphics features should normally enter through renderer-owned abstractions. Gameplay and unrelated runtime modules should not manipulate descriptor pools, command pools, fences, image layouts, or raw Vulkan pipelines directly.
+
+For the detailed CPU-to-GPU model, material and texture preparation flow, see [Asset System](asset-system.md#cpu-to-gpu-preparation).
