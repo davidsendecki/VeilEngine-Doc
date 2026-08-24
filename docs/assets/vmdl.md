@@ -1,73 +1,86 @@
 # VMDL Model Format
 
-VMDL is Veil's compiled runtime model format. Version 1 uses a block directory so independent model-data categories can evolve without turning the file into one monolithic structure.
+VMDL is Veil's compiled runtime model format. Version 1 stores a validated static-model representation that can be loaded directly into renderer-neutral CPU data and then prepared by RenderSystemVK.
 
 !!! warning "Format under development"
-    VMDL is versioned but still evolving. Version `1` describes the current binary contract; it should not yet be treated as a permanent compatibility promise.
+    VMDL is versioned, but version `1` is not yet a permanent compatibility promise. A loader rejects unsupported versions and asks for the model to be recompiled.
 
-## Outer layout
+## File layout
+
+The file begins with a fixed 72-byte `VMDLHeader`. It contains counts and absolute offsets for every serialized array:
 
 ```text
 VMDLHeader
-VMDLBlockEntry[BlockCount]
-...
-block payloads
+SModelMeshSection[MeshCount]
+uint32_t material-path-offsets[MaterialCount]
+SModelVertex[VertexCount]
+uint32_t indices[IndexCount]
+SModelCollisionBox[CollisionBoxCount]  # optional
+material-path string data
 ```
 
-The 16-byte `VMDLHeader` contains the `VMDL` magic, format version, block count, and expected complete file size.
+The header records:
 
-Each 24-byte `VMDLBlockEntry` identifies a block type/version and its file offset/size. Readers can therefore validate and locate blocks without assuming every possible block is present.
+- `VMDL` magic and format version;
+- serialized header size;
+- mesh-section count/offset;
+- material-path count/offset;
+- vertex count/offset;
+- number of valid source UV channels;
+- index count/offset;
+- collision-box count/offset;
+- string-data size/offset;
+- complete file size.
 
-## Block types
+All offsets are absolute file offsets. A collision-box offset of zero is valid only when the collision-box count is zero.
 
-The current enumeration defines architectural slots for:
+## Vertex representation
+
+`SModelVertex` is a fixed 56-byte interleaved vertex:
 
 ```text
-Metadata
-Strings
-Scene
-Meshes
-Materials
-Skeleton
-Animations
-Collision
-Physics
-LODs
-Bounds
+Position     : float3
+Normal       : float3
+Tangent      : float4
+TexCoords[0] : float2
+TexCoords[1] : float2
 ```
 
-The enumeration is broader than the currently completed static-model pipeline. A named block type means the format has an assigned category for that data; it does **not** mean the corresponding authoring/runtime feature is complete.
+`MaximumModelTexCoordChannels` is currently `2`. Both fixed UV slots are serialized and uploaded for every vertex. `VMDLHeader::TexCoordChannelCount` records whether one or both channels came from the source model.
 
-## Static mesh representation
+This design keeps the renderer vertex ABI fixed. A model with one source UV channel uses UV0 and leaves UV1 at its default value. UV data is not stored in a separate flattened array or uploaded through a storage buffer.
 
-The current mesh block begins with `VMDLMeshBlockHeader` and serializes each mesh as:
+## Mesh sections
 
-```text
-VMDLMesh
-VMDLVertex[VertexCount]
-uint32_t[IndexCount]
-```
+`SModelMeshSection` identifies a draw range and its material slot:
 
-`VMDLMesh` contains a name string-table index, material index, vertex/index counts, and local bounds.
+- `MaterialIndex` selects the corresponding material-path entry;
+- `FirstVertex` and `VertexCount` describe the section's vertex range;
+- `FirstIndex` and `IndexCount` describe its index range.
 
-The current 48-byte runtime vertex contains:
+All sections reference the shared model vertex and index arrays. Multiple sections can use different material slots while independently using the same UV channel numbers. UV coordinates belong to vertices, and texture selection belongs to the material assigned to the section.
 
-```text
-Position : float3
-Normal   : float3
-TexCoord : float2
-Tangent  : float4
-```
+## Material paths
 
-## Strings and materials
+The material section stores one `uint32_t` string-data offset per material slot. Paths are stored in the trailing string-data region and remain asset-relative.
 
-Meshes reference names/materials through indices rather than embedding repeated full strings in every mesh record. This keeps binary references compact and separates mesh geometry from string/material data.
+At runtime, AssetSystem resolves these paths to `AssetHandle<EAssetType::Material>` values. `SModelView::MaterialSlots` and `MaterialHandles` correspond one-to-one, using the indices referenced by mesh sections.
+
+## Collision boxes
+
+VMDL can store model-local oriented boxes. Each `SModelCollisionBox` contains:
+
+- center position relative to the model origin;
+- normalized quaternion in X, Y, Z, W order;
+- full width, height, and depth rather than half-extents.
+
+The loader rejects non-finite values, non-positive sizes, degenerate quaternions, and quaternions outside the normalization tolerance.
+
+Collision boxes are CPU asset data. PhysicsSystem consumes them when creating model collision; RenderSystemVK does not upload them as rendering geometry.
 
 ## Runtime loading
 
-The AssetSystem model loader is implemented by `CVeilModelLoader`. It replaced the earlier `CVMDLReader` implementation and is responsible for validating and decoding compiled VMDL data into the runtime model representation.
-
-The loader uses the shared `CBinaryReader` for bounds-checked binary access. Binary-range validation remains part of the loading boundary before data is exposed to the AssetSystem.
+`CVeilModelLoader` validates and decodes the file into `SModelData`:
 
 ```text
 .vmdl
@@ -76,17 +89,28 @@ The loader uses the shared `CBinaryReader` for bounds-checked binary access. Bin
 CVeilModelLoader
   │
   ▼
-AssetSystem-owned model record / CPU model data
+AssetSystem-owned SModelData
   │
   ├─ AssetHandle<EAssetType::Model>
-  └─ borrowed SModelAssetView
-  │
-  ▼
-RenderSystemVK GPU preparation
+  └─ borrowed SModelView
+       ├─ PhysicsSystem consumes collision data
+       └─ RenderSystemVK prepares GPU geometry/materials
 ```
 
-The loader and AssetSystem produce CPU-side runtime content. Vulkan buffers and other backend resources are not part of the VMDL ownership model.
+The loader validates, among other invariants:
+
+- magic, version, header size, and complete file size;
+- supported UV channel count from one through two;
+- every array range and pair of section offsets;
+- non-overlapping serialized regions;
+- finite vertex attributes and UVs;
+- index references and mesh-section ranges;
+- material indices and string offsets;
+- collision-box storage and values;
+- derived axis-aligned bounds.
+
+Vulkan buffers, descriptor sets, and renderer-private handles are never serialized in VMDL.
 
 ## Evolution rule
 
-When new blocks become concrete, document their exact serialized structures, block versions, validation requirements, and relationships to existing indices. Avoid documenting planned skeleton/animation/physics layouts before those contracts actually exist in code.
+Any VMDL layout change must update the shared format structures, compiler, loader validation, tools, AssetSystem views, and documentation together. Increase the format version when an existing file cannot be interpreted safely under the new contract.

@@ -32,6 +32,8 @@ The Material Editor uses shader information as part of its authoring workflow. S
 
 Runtime rendering does not need to perform the same editor reflection workflow. Runtime-facing shader artifacts can therefore remain optimized for rendering while the tools retain access to the source information required for authoring.
 
+Runtime descriptor set and binding numbers are governed by the manually mirrored C++/Slang contract documented under [Descriptors & Shader Bindings](../engine/rendering/descriptors-bindings.md). Material authoring metadata and Vulkan descriptor ownership are separate concerns.
+
 ## Direction
 
 Shader modules should avoid duplicating complete material implementations merely because model vertex processing differs. Shared material and lighting behavior belongs in reusable modules, while static/skeletal model paths can provide the vertex-processing differences needed by each model type.

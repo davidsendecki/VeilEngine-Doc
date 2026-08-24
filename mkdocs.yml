@@ -53,10 +53,15 @@ nav:
       - Asset System: engine/asset-system.md
       - Physics: engine/physics.md
       - Rendering:
-          - Overview: engine/rendering.md
-          - RenderSystemVK Layers: engine/rendering-layers.md
-          - Render Frame & Presentation: engine/render-frame.md
-          - Commands & GPU Resources: engine/render-commands-resources.md
+          - Overview: engine/rendering/index.md
+          - Architecture & Ownership: engine/rendering/architecture.md
+          - Render API & Data Boundary: engine/rendering/render-api.md
+          - Frame Lifecycle: engine/rendering/frame-lifecycle.md
+          - GPU Resource Management: engine/rendering/gpu-resources.md
+          - Passes, Pipelines & Shaders: engine/rendering/passes-pipelines-shaders.md
+          - Descriptors & Shader Bindings: engine/rendering/descriptors-bindings.md
+          - Presentation & Resize: engine/rendering/presentation.md
+          - Vulkan Foundation: engine/rendering/vulkan-foundation.md
   - Client & Gameplay:
       - Overview: client/index.md
       - Game Session & Rules: client/game-session.md

@@ -56,9 +56,9 @@ The Engine coordinates this transition during map loading. AssetSystem does not 
 | Data or service | Owner | Consumer | Lifetime rule |
 | --- | --- | --- | --- |
 | Asset record metadata | AssetSystem storage | AssetSystem | Valid until storage is cleared or AssetSystem shuts down |
-| Model vertex/index data | AssetSystem | RenderSystemVK through `SModelAssetView` | View is borrowed |
-| Material parameters and texture references | AssetSystem | RenderSystemVK through `SMaterialAssetView` | View is borrowed |
-| Decoded texture bytes and mip metadata | AssetSystem | RenderSystemVK through `STextureAssetView` | View is borrowed |
+| Model geometry, sections, material slots and collision | AssetSystem | RenderSystemVK/PhysicsSystem through `SModelView` | View is borrowed |
+| Material parameters and resolved texture bindings | AssetSystem | RenderSystemVK through `SMaterialView` | View is borrowed |
+| Decoded texture bytes and subresource metadata | AssetSystem | RenderSystemVK through `STextureView` | View is borrowed |
 | Dependency-batch bookkeeping | AssetSystem | Engine/map loader | Destroying a batch does not destroy records |
 | GPU meshes, materials and textures | RenderSystemVK | Rendering passes | Independent from CPU view ownership |
 | World/entities/components | Client/Game | Gameplay systems and extraction | Never owned by AssetSystem |
@@ -313,13 +313,17 @@ The renderer later interprets an invalid material handle as a request for its sh
 
 ### Model view
 
-`GetModel()` does not transfer the vectors. It fills `SModelAssetView` with borrowed pointers and counts for:
+`GetModel()` does not transfer the vectors. It fills `SModelView` with borrowed spans for:
 
 - vertices;
 - indices;
 - mesh sections;
+- material-slot descriptions;
 - resolved material handles;
+- model-local collision boxes;
 - model bounds copied by value.
+
+The view also copies `TexCoordChannelCount`, which identifies whether one or both fixed UV slots in each `SModelVertex` came from the source.
 
 The AssetSystem record remains the owner of all pointed-to memory.
 
@@ -357,18 +361,19 @@ For every parsed texture reference, AssetSystem determines:
 
 Base-color textures are requested as sRGB. Normal, roughness, metallic and ambient-occlusion textures are requested as linear.
 
-The resulting `SMaterialTexture` stores the path, semantic, texture handle and fallback marker. `SMaterialRecord` owns these entries and also builds `SMaterialTextureView` entries whose pointers can be exposed through the module API.
+The loaded material definition stores named parameters, including texture references. AssetSystem resolves those references and builds `SMaterialTextureBinding` entries that associate a parameter index with its texture handle and fallback state.
 
 ### Material view
 
-`GetMaterial()` succeeds only for a ready record. `SMaterialAssetView` borrows:
+`GetMaterial()` succeeds only for a ready record. `SMaterialView` borrows:
 
-- the shader-name string;
-- the texture-view array;
+- the shader and surface-property strings;
+- the material parameter array;
+- the resolved texture-binding array;
 
-and copies the standard parameters and fallback flag by value.
+and copies the complete-material fallback flag by value.
 
-The renderer uses the semantic on each texture view to place the texture in the corresponding GPU material slot.
+The renderer resolves standard material values by parameter name and uses each texture binding's parameter index to place the texture in the corresponding GPU material slot.
 
 ## Texture pipeline
 
@@ -396,7 +401,7 @@ The loader accepts supported non-array, non-cubemap two-dimensional KTX2 texture
 
 ### Texture view
 
-`GetTexture()` requires a ready, valid record. `STextureAssetView` borrows the byte allocation and subresource array while copying dimensions, format, mip count and color space.
+`GetTexture()` requires a ready, valid record. `STextureView` borrows the byte allocation and subresource array while copying texture type, format, dimensions, mip count, and array-layer count.
 
 The view deliberately contains no KTX objects. KTX-Software is confined to AssetSystem's loading implementation.
 
@@ -408,7 +413,7 @@ For each unique handle it:
 
 1. skips a model already present in the GPU cache;
 2. verifies that the CPU model is ready;
-3. obtains `SModelAssetView` from AssetSystem;
+3. obtains `SModelView` through the imported model lookup;
 4. asks `CGPUResourceManager` to create the static mesh.
 
 `CGPUResourceManager::CreateStaticMesh()` uploads vertex and index buffers, copies mesh-section metadata, and resolves each material handle.
@@ -419,13 +424,13 @@ GPU dependency resolution then follows the CPU relationship:
 AssetHandle<Model>
    │
    ▼
-GPUStaticMesh
-   │ GPUMaterialHandle per material slot
+CGPUStaticMesh
+   │ SGPUMaterialHandle per material slot
    ▼
 GPUMaterial
-   │ GPUTextureHandle per texture semantic
+   │ SGPUTextureHandle per texture parameter
    ▼
-GPUTexture / CVulkanImage
+CGPUTexture / CVkTexture2D
 ```
 
 The GPU manager maintains independent caches from source asset IDs to GPU handles. CPU asset handles remain the cross-system identity; GPU handles are renderer-private indexes.
@@ -483,8 +488,8 @@ The current pipeline contains several structures because each one serves a diffe
 | VMDL/VMAT/KTX2 declarations | Serialized or parsed file representation |
 | `SLoadedModel` / `SLoadedMaterial` / `STextureData` | Owning CPU loader result |
 | `SModelRecord` / `SMaterialRecord` / `STextureRecord` | Handle, path, state and resolved dependency ownership |
-| `SModelAssetView` / `SMaterialAssetView` / `STextureAssetView` | Borrowed cross-module access without transferring ownership |
-| `GPUStaticMesh` / `GPUMaterial` / `GPUTexture` | Backend-specific renderer state |
+| `SModelView` / `SMaterialView` / `STextureView` | Borrowed cross-module access without transferring ownership |
+| `CGPUStaticMesh` / `GPUMaterial` / `CGPUTexture` | Backend-specific renderer state |
 
 This separation is valid, but some internal layers duplicate data and can be simplified later without changing the ownership model.
 

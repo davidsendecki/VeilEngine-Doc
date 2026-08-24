@@ -62,7 +62,7 @@ The AssetSystem import remains deliberately small: shared paths and logging. Mod
 
 ## RenderSystem API
 
-`SRenderSysAPI` version 1 is the Engine-facing rendering boundary. Its import structure receives the window, paths/logger, and a borrowed AssetSystem API used as the CPU source during GPU preparation.
+`SRenderSysAPI` version 1 is the Engine-facing rendering boundary. Its import structure receives the window, paths/logger, and model/material/texture lookup callbacks used as the CPU source during GPU preparation. RenderSystemVK does not own AssetSystem records; the returned `SModelView`, `SMaterialView`, and `STextureView` values borrow their storage.
 
 ```text
 Initialize / Shutdown
@@ -73,7 +73,7 @@ OnWindowPixelSizeChanged
 SetVSync
 ```
 
-The current resource policy prepares model GPU state before map activation and can clear the model-resource cache during replacement/failure cleanup. Materials and textures are resolved transitively by the renderer through AssetSystem's material and texture view operations.
+The current resource policy eagerly prepares model GPU state before map activation, defensively verifies referenced resources during rendering, and can clear the model-resource cache during replacement/failure cleanup. Materials and textures are resolved transitively through the imported view operations. See [Rendering](../engine/rendering/index.md) for the complete renderer architecture.
 
 ## PhysicsSystem API
 
