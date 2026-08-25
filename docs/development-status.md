@@ -14,7 +14,9 @@ The client framework has a staged map/world lifecycle, generation-aware entity h
 
 RenderSystemVK now has documented ownership layers, frame recovery, deferred presentation recreation, managed shaders/pipelines, explicit descriptor contracts, typed resources, and cached GPU models/materials/textures. Skeletal rendering, shadows, additional light types, bindless resources, and runtime material instances remain future work. Public APIs are versioned, but version `1` should not be interpreted as a promise that the overall engine architecture is frozen.
 
-Player movement and physics integration are functional foundations rather than a finished gameplay stack. The current PhysicsSystem API is version 3 and includes the stateless character-movement query used by the client movement system.
+Player movement and physics integration are functional foundations rather than a finished gameplay stack. The current PhysicsSystem API is version 1. It provides generation-safe scene and body handles, primitive and VMDL-authored box collision, rigid-body state operations, fixed-step simulation, and the stateless character-movement query used by the client movement system.
+
+Physics debug drawing, sensors and overlap events, ray and shape queries, dedicated kinematic targets, reusable surface properties, joints, vehicles, ragdolls, and complex mesh collision are not part of the current public contract.
 
 ## Intentionally deferred documentation
 

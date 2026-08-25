@@ -77,23 +77,24 @@ The current resource policy eagerly prepares model GPU state before map activati
 
 ## PhysicsSystem API
 
-`SPhysicSysAPI` is currently version 3. It exposes engine-defined physics handles and descriptors rather than Box3D types.
+`SPhysicSysAPI` is currently version 1. It exposes engine-defined physics handles and descriptors rather than Box3D types.
 
 ```text
 Scenes
   CreateScene / DestroyScene / IsSceneValid / StepScene
 
 Bodies
-  CreateBoxBody / DestroyBody / IsBodyValid
-  GetBodyTransform / SetBodyTransform
-  GetBodyLinearVelocity / SetBodyLinearVelocity
+  CreateBoxBody / CreateModelBody
+  DestroyBody / IsBodyValid
+  SetBodyTransform / GetBodyTransform
+  SetBodyLinearVelocity / GetBodyLinearVelocity
   ApplyBodyImpulse
 
 Character
   MoveCharacter
 ```
 
-Diagnostic active-scene/body counters are also currently exported.
+Diagnostic active-scene/body counters are also currently exported. Scene and body handles are generation checked, and each body handle identifies its owning scene. See [Physics API & Handles](../engine/physics/api-handles.md) for the complete boundary and lifetime rules.
 
 ## Game API
 

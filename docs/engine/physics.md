@@ -1,29 +1,64 @@
 # Physics
 
-Veil exposes physics through a dedicated PhysicsSystem module backed by Box3D. Gameplay code communicates through `SPhysicSysAPI` and engine-defined handles/descriptors rather than retaining Box3D objects directly.
+Veil's runtime physics is implemented by the dynamically loaded **PhysicsSystem** subsystem and backed internally by Box3D. Engine and gameplay code communicate through platform-independent descriptors, generation-aware handles, and `SPhysicSysAPI`; Box3D objects never cross the subsystem boundary.
 
-## PhysicsSystem responsibilities
+```text
+Gameplay entities and components
+              │
+              ▼
+ CPhysicsSimulationSystem
+              │ Veil handles and descriptors
+              ▼
+       SPhysicSysAPI
+              │
+              ▼
+       CPhysicsSystem
+              │
+              ▼
+     CPhysicsScene → Box3D
+```
 
-`CPhysicsSystem` currently owns physics scenes and rigid bodies, steps scenes, exposes body transforms and linear velocity, applies impulses, and provides character movement queries.
+## Current capabilities
 
-Both scenes and bodies use generation-aware handles backed by reusable slots. Destroyed slots can be recycled without making an old handle accidentally resolve to a newer object.
+The current implementation provides:
 
-## Scene ownership
+- independent physics scenes with configurable gravity;
+- static, kinematic, and dynamic rigid bodies;
+- primitive box bodies;
+- model bodies built from authored VMDL collision boxes;
+- per-shape density, friction, restitution, and collision filtering;
+- transform and linear-velocity access;
+- linear impulses applied at a body's center of mass;
+- a stateless capsule query used by client-owned character movement;
+- generation-aware scene and body handles with stale- and wrong-scene rejection.
 
-A physics scene represents one simulation world. Bodies are associated with the scene that created them, and destroying a scene invalidates its bodies.
+## Ownership summary
 
-The client-side world uses a `CPhysicsSimulationSystem` to bridge ECS physics components and the PhysicsSystem API. This keeps Box3D-specific ownership inside the physics module while gameplay retains its own entity/component representation.
+`CPhysicsSystem` is the public coordinator. It owns the scene-slot registry and `CPhysicsBodyFactory`. Each occupied scene slot contains a move-only `CPhysicsScene`, which exclusively owns one Box3D world and a scene-local body registry.
 
-## Fixed stepping
+On the gameplay side, each `CWorld` owns one `CPhysicsSimulationSystem`. It stores only the opaque scene and body handles returned through `SPhysicSysAPI`, creates bodies from ECS components, pushes kinematic transforms, steps the scene, and pulls simulated dynamic transforms back into ECS state.
 
-Physics simulation is driven from the engine's fixed simulation path. The player movement system performs its character collision queries before the world's rigid-body scene receives its single fixed step.
+See [Architecture & Ownership](physics/architecture.md) for the complete lifetime and responsibility model.
 
-This ordering is deliberate: character movement does not independently advance the physics world.
+## Fixed simulation
 
-## Character mover
+Physics runs only in the fixed simulation path. A world creates pending bodies and publishes kinematic transforms before player movement queries the pre-step scene. The rigid-body scene is then advanced exactly once, dynamic transforms are copied back into ECS storage, transform matrices are updated, and pending entity destruction is flushed.
 
-The PhysicsSystem exposes `MoveCharacter` using engine-owned `SCharacterMoverDesc`, `SCharacterMoveInput`, and `SCharacterMoveResult` structures. The player movement system can therefore perform capsule movement/collision queries without exposing Box3D types to gameplay code.
+The character mover never steps the scene itself. It performs a bounded geometric query against the scene's current state and returns backend-neutral contacts and corrected motion to the Client.
 
-## Boundary rule
+See [Fixed-Step Synchronization](physics/fixed-step.md) and [Character Movement](physics/character-movement.md) for the exact order and division of responsibility.
 
-Gameplay and engine systems should prefer the public physics API. Box3D identifiers and implementation details belong inside `physicsystem`; leaking them into ECS components would couple gameplay state to the selected physics backend.
+## Documentation map
+
+- [Architecture & Ownership](physics/architecture.md) — module boundaries, internal classes, lifetimes, and destruction.
+- [API & Handles](physics/api-handles.md) — imports, callbacks, shared descriptors, and generation validation.
+- [Bodies & Collision](physics/bodies-collision.md) — motion types, categories, filtering, materials, and body construction.
+- [Fixed-Step Synchronization](physics/fixed-step.md) — ECS body creation and transform flow.
+- [Character Movement](physics/character-movement.md) — capsule queries and client-owned movement policy.
+
+## Backend boundary
+
+Box3D identifiers, definitions, shapes, queries, and conversion helpers belong inside `src/physicssystem`. Shared and Client headers use only Veil-owned types. This keeps gameplay independent from the selected physics backend and makes DLL ownership explicit.
+
+!!! warning "Current scope"
+    PhysicsSystem does not yet expose general raycasts, shape casts, sensors, overlap events, debug drawing, named surface materials, joints, or runtime collider rebuilding. Primitive sphere and capsule rigid-body descriptors are also not public yet; the existing capsule is used only by the stateless character mover.

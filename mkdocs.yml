@@ -51,7 +51,13 @@ nav:
       - Engine Lifecycle: engine/lifecycle.md
       - Map Loading: engine/map-loading.md
       - Asset System: engine/asset-system.md
-      - Physics: engine/physics.md
+      - Physics:
+          - Overview: engine/physics.md
+          - Architecture & Ownership: engine/physics/architecture.md
+          - API & Handles: engine/physics/api-handles.md
+          - Bodies & Collision: engine/physics/bodies-collision.md
+          - Fixed-Step Synchronization: engine/physics/fixed-step.md
+          - Character Movement: engine/physics/character-movement.md
       - Rendering:
           - Overview: engine/rendering/index.md
           - Architecture & Ownership: engine/rendering/architecture.md
