@@ -15,7 +15,7 @@ VeilEngine/
 │  ├─ client/
 │  ├─ engine/
 │  ├─ launcher/
-│  ├─ physicsystem/
+│  ├─ physicssystem/
 │  ├─ rendersystemvk/
 │  ├─ scriptsystem/
 │  ├─ shared/
@@ -31,6 +31,25 @@ VeilEngine/
 `src/shared/include` contains public contracts grouped by concern, including API definitions, assets, core utilities, input, interfaces, maps, math, physics, platform abstractions, and rendering structures.
 
 This separation is important: implementation-specific classes can evolve inside their subsystem while the public boundary remains explicit.
+
+The PhysicsSystem implementation keeps Box3D behind that shared boundary and separates its internal responsibilities by ownership:
+
+```text
+src/physicssystem/src/
+├─ PhysicsSystem.h/.cpp
+├─ PhysicsSystemAPI.cpp
+├─ body/
+│  └─ PhysicsBodyFactory.h/.cpp
+├─ character/
+│  └─ PhysicsCharacterMover.h/.cpp
+├─ scene/
+│  └─ PhysicsScene.h/.cpp
+└─ shared/
+   ├─ Box3DConversions.h/.cpp
+   └─ PhysicsValidation.h
+```
+
+`CPhysicsSystem` coordinates the public API and scene registry, while each `CPhysicsScene` owns one Box3D world and its scene-local body registry. See [Physics Architecture & Ownership](../engine/physics/architecture.md).
 
 ## Shader source
 

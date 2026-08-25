@@ -76,7 +76,7 @@ VMDL can store model-local oriented boxes. Each `SModelCollisionBox` contains:
 
 The loader rejects non-finite values, non-positive sizes, degenerate quaternions, and quaternions outside the normalization tolerance.
 
-Collision boxes are CPU asset data. PhysicsSystem consumes them when creating model collision; RenderSystemVK does not upload them as rendering geometry.
+Collision boxes are CPU asset data. PhysicsSystem consumes them synchronously when creating a model body; one model body receives one Box3D hull shape per authored collision box. RenderSystemVK does not upload them as rendering geometry. See [Physics Bodies & Collision](../engine/physics/bodies-collision.md#model-bodies) for the runtime construction rules.
 
 ## Runtime loading
 

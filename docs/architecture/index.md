@@ -11,7 +11,7 @@ The current documentation focuses on:
 - `client` — game/client-side world and gameplay integration.
 - `assetsystem` — runtime asset ownership, loading, handles, and dependency batches.
 - `rendersystemvk` — Vulkan rendering backend.
-- `physicsystem` — physics integration.
+- `physicssystem` — physics integration.
 - `shared` — public APIs, interfaces, asset structures, math, map structures, and common contracts.
 
 Other experimental or not-yet-priority runtime modules may exist in the repository but are intentionally omitted from this documentation until their architecture is ready to be treated as useful reference material.
